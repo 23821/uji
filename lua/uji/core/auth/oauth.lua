@@ -254,7 +254,7 @@ function M.exchange(config, code, redirect_uri, verifier, state)
         { "redirect_uri", redirect_uri },
         { "code_verifier", verifier },
     }
-    if config.state == "verifier" then
+    if config.state == "verifier" and state then
         fields[#fields + 1] = { "state", state }
     end
     return tokens(config, post(config, "token exchange", fields))

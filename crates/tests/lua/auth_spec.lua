@@ -281,6 +281,20 @@ it("keeps the existing credential if the final token exchange fails", function()
     assert.equal("existing", auth.credentials():get(ID).key)
 end)
 
+it("leaves state out of the device sign-in exchange", function()
+    local fields
+    local chosen = device_provider(function(request)
+        if request.path == "/poll" then
+            return json(APPROVED)
+        end
+        fields = form(request.raw)
+        return json(grant())
+    end)
+    chosen.oauth.state = "verifier"
+    assert.is_true(uji.auth.login(ID, { method = "device" }))
+    assert.is_nil(fields.state)
+end)
+
 it("reports a credential save failure after a successful device exchange", function()
     device_provider(function(request)
         if request.path == "/poll" then
