@@ -1,9 +1,11 @@
 local list = require("uji.utils.list")
 
 local SUBSCRIPTION = "Subscription (sign in with browser)"
+local DEVICE = "Subscription (sign in with device code)"
 local API_KEY = "API key"
 local SIGN_IN = "Sign in again"
 local SIGN_OUT = "Sign out"
+local SIGN_IN_WITH = { [SUBSCRIPTION] = "browser", [DEVICE] = "device" }
 
 local function configure(provider, url)
     uji.model.use({ provider = provider.id, base_url = url and url.base_url or "", model = url and url.model })
@@ -38,10 +40,10 @@ local function ask_key(provider)
     return true
 end
 
-local function sign_in(provider)
-    local ok, err = uji.auth.login(provider.id)
+local function sign_in(provider, method, url)
+    local ok, err = uji.auth.login(provider.id, { method = method })
     if ok then
-        uji.notify("signed in to " .. provider.id)
+        configure(provider, url)
     else
         uji.notify("sign-in failed: " .. tostring(err))
     end
@@ -91,11 +93,16 @@ uji.command.add("login", {
         local needs_url = provider.base_url == ""
         local blank = needs_url and { base_url = "", model = "" } or nil
         if provider.oauth then
-            local method = uji.ui.select({ title = provider.name .. " sign-in", items = { SUBSCRIPTION, API_KEY } })
-            if method == SUBSCRIPTION then
-                configure(provider, blank)
-                sign_in(provider)
-            elseif method == API_KEY and ask_key(provider) then
+            local items = { SUBSCRIPTION }
+            if provider.device_auth then
+                items[#items + 1] = DEVICE
+            end
+            items[#items + 1] = API_KEY
+            local choice = uji.ui.select({ title = provider.name .. " sign-in", items = items })
+            local method = SIGN_IN_WITH[choice]
+            if method then
+                sign_in(provider, method, blank)
+            elseif choice == API_KEY and ask_key(provider) then
                 configure(provider, blank)
             end
             return
